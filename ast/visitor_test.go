@@ -627,14 +627,18 @@ func (self *visitorUserNodeVisitorDecoder) onValueEnd() error {
 	return nil
 }
 
-func testUserNodeDiff(t *testing.T, d1, d2 visitorUserNodeDecoder, str string) {
+func testUserNodeDiff(
+	t *testing.T,
+	d1, d2 visitorUserNodeDecoder,
+	jsonStr string,
+) {
 	t.Helper()
 	d1.Reset()
-	n1, err := d1.Decode(_TwitterJson)
+	n1, err := d1.Decode(jsonStr)
 	require.NoError(t, err)
 
 	d2.Reset()
-	n2, err := d2.Decode(_TwitterJson)
+	n2, err := d2.Decode(jsonStr)
 	require.NoError(t, err)
 
 	require.True(t, compareUserNode(t, n1, n2))

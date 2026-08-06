@@ -29,7 +29,7 @@ import (
 
 const (
 	_DEFAULT_NODE_CAP  int = 16
-	_APPEND_GROW_SHIFT     = 1
+	_APPEND_GROW_SHIFT int = 1
 )
 
 const (
@@ -119,11 +119,6 @@ func (self *Parser) lspace(sp int) int {
 	}
 
 	return sp
-}
-
-func (self *Parser) backward() {
-	for ; self.p >= 0 && utils.IsSpace(self.s[self.p]); self.p -= 1 {
-	}
 }
 
 func (self *Parser) decodeArray(ret *linkedNodes) (Node, types.ParsingError) {
@@ -375,124 +370,6 @@ func (self *Parser) Parse() (Node, types.ParsingError) {
 	}
 }
 
-func (self *Parser) searchKey(match string) types.ParsingError {
-	ns := len(self.s)
-	if err := self.object(); err != 0 {
-		return err
-	}
-
-	/* check for EOF */
-	if self.p = self.lspace(self.p); self.p >= ns {
-		return types.ERR_EOF
-	}
-
-	/* check for empty object */
-	if self.s[self.p] == '}' {
-		self.p++
-		return _ERR_NOT_FOUND
-	}
-
-	var njs types.JsonState
-	var err types.ParsingError
-	/* decode each pair */
-	for {
-
-		/* decode the key */
-		if njs = self.decodeValue(); njs.Vt != types.V_STRING {
-			return types.ERR_INVALID_CHAR
-		}
-
-		/* extract the key */
-		idx := self.p - 1
-		key := self.s[njs.Iv:idx]
-
-		/* check for escape sequence */
-		if njs.Ep != -1 {
-			if key, err = unquote.String(key); err != 0 {
-				return err
-			}
-		}
-
-		/* expect a ':' delimiter */
-		if err = self.delim(); err != 0 {
-			return err
-		}
-
-		/* skip value */
-		if key != match {
-			if _, err = self.skipFast(); err != 0 {
-				return err
-			}
-		} else {
-			return 0
-		}
-
-		/* check for EOF */
-		self.p = self.lspace(self.p)
-		if self.p >= ns {
-			return types.ERR_EOF
-		}
-
-		/* check for the next character */
-		switch self.s[self.p] {
-		case ',':
-			self.p++
-		case '}':
-			self.p++
-			return _ERR_NOT_FOUND
-		default:
-			return types.ERR_INVALID_CHAR
-		}
-	}
-}
-
-func (self *Parser) searchIndex(idx int) types.ParsingError {
-	ns := len(self.s)
-	if err := self.array(); err != 0 {
-		return err
-	}
-
-	/* check for EOF */
-	if self.p = self.lspace(self.p); self.p >= ns {
-		return types.ERR_EOF
-	}
-
-	/* check for empty array */
-	if self.s[self.p] == ']' {
-		self.p++
-		return _ERR_NOT_FOUND
-	}
-
-	var err types.ParsingError
-	/* allocate array space and parse every element */
-	for i := 0; i < idx; i++ {
-
-		/* decode the value */
-		if _, err = self.skipFast(); err != 0 {
-			return err
-		}
-
-		/* check for EOF */
-		self.p = self.lspace(self.p)
-		if self.p >= ns {
-			return types.ERR_EOF
-		}
-
-		/* check for the next character */
-		switch self.s[self.p] {
-		case ',':
-			self.p++
-		case ']':
-			self.p++
-			return _ERR_NOT_FOUND
-		default:
-			return types.ERR_INVALID_CHAR
-		}
-	}
-
-	return 0
-}
-
 func (self *Node) skipNextNode() *Node {
 	if !self.isLazy() {
 		return nil
@@ -705,12 +582,6 @@ func (self *Parser) ExportError(err types.ParsingError) error {
 		Src:  self.s,
 		Code: err,
 	}.Description())
-}
-
-func backward(src string, i int) int {
-	for ; i >= 0 && utils.IsSpace(src[i]); i-- {
-	}
-	return i
 }
 
 func newRawNode(str string, typ types.ValueType, lock bool) Node {

@@ -31,8 +31,6 @@ import (
 	"github.com/bytedance/sonic/utf8"
 )
 
-var typeByte = rt.UnpackEface(byte(0)).Type
-
 func quote(buf *[]byte, val string) {
 	*buf = alg.Quote(*buf, val, false)
 }
@@ -91,4 +89,39 @@ func (self *Parser) getByPath(validate bool, path ...interface{}) (int, types.Pa
 
 func validate_utf8(str string) bool {
 	return utf8.ValidateString(str)
+}
+
+func _GetByPath(src string, path ...interface{}) (start int, end int, typ int, err error) {
+	parser := Parser{s: src}
+	start, parseErr := parser.getByPath(false, path...)
+
+	if parseErr != 0 {
+		return parser.p, parser.p, 0, parser.ExportError(parseErr)
+	}
+
+	valueType := switchRawType(parser.s[start])
+
+	if valueType == _V_NONE {
+		return start, parser.p, 0, parser.ExportError(parseErr)
+	}
+
+	return start, parser.p, int(valueType), nil
+}
+
+func _SkipFast(src string, pos int) (start int, end int, err error) {
+	parser := Parser{s: src, p: pos}
+	start, parseErr := parser.skipFast()
+
+	if parseErr != 0 {
+		return parser.p, parser.p, parser.ExportError(parseErr)
+	}
+
+	return start, parser.p, nil
+}
+
+func _ValidSyntax(src string) bool {
+	parser := Parser{s: src}
+	_, parseErr := parser.skip()
+
+	return parseErr == 0 && parser.p == len(src)
 }

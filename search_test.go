@@ -544,14 +544,15 @@ func testManyAny(t *testing.T, json string, paths, expected []string) {
 	var result []string
 	for i := 0; i < 2; i++ {
 		var which string
-		if i == 0 {
+		switch i {
+		case 0:
 			which = "Get"
 			result = nil
 			for j := 0; j < len(expected); j++ {
 				x, _ := get(json, paths[j]).Interface()
 				result = append(result, fmt.Sprintf("%v", x))
 			}
-		} else if i == 1 {
+		case 1:
 			which = "GetMany"
 			result = GetMany(json, paths...)
 		}

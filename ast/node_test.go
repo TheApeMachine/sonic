@@ -1413,6 +1413,84 @@ func TestNodeSetByPath(t *testing.T) {
 	}
 }
 
+func TestInterfaceTypedSlices(t *testing.T) {
+	parsed, derr := NewParser(`{"features":[1.5,2.5,3.5],"labels":["a","b"],"mixed":[1,"x"]}`).Parse()
+	if derr != 0 {
+		t.Fatalf("decode failed: %v", derr.Error())
+	}
+
+	features, err := parsed.GetByPath("features").Interface()
+	if err != nil {
+		t.Fatalf("features interface failed: %v", err)
+	}
+
+	featureSlice, ok := features.([]float64)
+	if !ok {
+		t.Fatalf("exp []float64, got %T", features)
+	}
+
+	if len(featureSlice) != 3 || featureSlice[0] != 1.5 {
+		t.Fatalf("unexpected feature slice: %+v", featureSlice)
+	}
+
+	labels, err := parsed.GetByPath("labels").Interface()
+	if err != nil {
+		t.Fatalf("labels interface failed: %v", err)
+	}
+
+	labelSlice, ok := labels.([]string)
+	if !ok {
+		t.Fatalf("exp []string, got %T", labels)
+	}
+
+	if len(labelSlice) != 2 || labelSlice[1] != "b" {
+		t.Fatalf("unexpected label slice: %+v", labelSlice)
+	}
+
+	mixed, err := parsed.GetByPath("mixed").Interface()
+	if err != nil {
+		t.Fatalf("mixed interface failed: %v", err)
+	}
+
+	mixedSlice, ok := mixed.([]interface{})
+	if !ok {
+		t.Fatalf("exp []interface{}, got %T", mixed)
+	}
+
+	if len(mixedSlice) != 2 {
+		t.Fatalf("unexpected mixed slice: %+v", mixedSlice)
+	}
+
+	arrayAPI, err := parsed.GetByPath("features").Array()
+	if err != nil {
+		t.Fatalf("array api failed: %v", err)
+	}
+
+	if len(arrayAPI) != 3 {
+		t.Fatalf("Array() must preserve generic slice length, got %+v", arrayAPI)
+	}
+
+	root := NewObject(nil)
+	_, err = root.SetAnyByPath(42, "count")
+	if err != nil {
+		t.Fatalf("set count failed: %v", err)
+	}
+
+	count, err := root.GetByPath("count").Interface()
+	if err != nil {
+		t.Fatalf("count interface failed: %v", err)
+	}
+
+	countFloat, ok := count.(float64)
+	if !ok {
+		t.Fatalf("exp float64 for V_ANY int, got %T", count)
+	}
+
+	if countFloat != 42 {
+		t.Fatalf("exp 42, got %v", countFloat)
+	}
+}
+
 func TestNodeSetByIndex(t *testing.T) {
 	root, derr := NewParser(_TwitterJson).Parse()
 	if derr != 0 {

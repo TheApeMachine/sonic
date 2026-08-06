@@ -699,11 +699,16 @@ func (self *Node) Len() (int, error) {
 	if err := self.checkRaw(); err != nil {
 		return 0, err
 	}
-	if self.t == types.V_ARRAY || self.t == types.V_OBJECT || self.t == _V_ARRAY_LAZY || self.t == _V_OBJECT_LAZY || self.t == types.V_STRING {
+	switch self.t {
+	case types.V_ARRAY,
+		types.V_OBJECT,
+		_V_ARRAY_LAZY,
+		_V_OBJECT_LAZY,
+		types.V_STRING:
 		return int(self.l), nil
-	} else if self.t == _V_NONE || self.t == types.V_NULL {
+	case _V_NONE, types.V_NULL:
 		return 0, nil
-	} else {
+	default:
 		return 0, ErrUnsupportType
 	}
 }
@@ -841,12 +846,13 @@ func (self *Node) UnsetByIndex(index int) (bool, error) {
 	var p *Node
 	it := self.itype()
 
-	if it == types.V_ARRAY {
+	switch it {
+	case types.V_ARRAY:
 		if err := self.skipAllIndex(); err != nil {
 			return false, err
 		}
 		p = self.nodeAt(index)
-	} else if it == types.V_OBJECT {
+	case types.V_OBJECT:
 		if err := self.skipAllKey(); err != nil {
 			return false, err
 		}
@@ -855,7 +861,7 @@ func (self *Node) UnsetByIndex(index int) (bool, error) {
 			return false, ErrNotExist
 		}
 		p = &pr.Value
-	} else {
+	default:
 		return false, ErrUnsupportType
 	}
 
@@ -1492,7 +1498,13 @@ func (self *Node) Interface() (interface{}, error) {
 	case types.V_FALSE:
 		return false, nil
 	case types.V_ARRAY:
-		return self.toGenericArray()
+		items, err := self.toGenericArray()
+
+		if err != nil {
+			return nil, err
+		}
+
+		return compactGenericSlice(items), nil
 	case types.V_OBJECT:
 		return self.toGenericObject()
 	case types.V_STRING:
@@ -1507,20 +1519,33 @@ func (self *Node) Interface() (interface{}, error) {
 		if err := self.loadAllIndex(false); err != nil {
 			return nil, err
 		}
-		return self.toGenericArray()
+
+		items, err := self.toGenericArray()
+
+		if err != nil {
+			return nil, err
+		}
+
+		return compactGenericSlice(items), nil
 	case _V_OBJECT_LAZY:
 		if err := self.loadAllKey(false); err != nil {
 			return nil, err
 		}
 		return self.toGenericObject()
 	case _V_ANY:
-		switch v := self.packAny().(type) {
+		switch wrapped := self.packAny().(type) {
 		case Node:
-			return v.Interface()
+			return wrapped.Interface()
 		case *Node:
-			return v.Interface()
+			return wrapped.Interface()
+		case int:
+			return float64(wrapped), nil
+		case int64:
+			return float64(wrapped), nil
+		case float32:
+			return float64(wrapped), nil
 		default:
-			return v, nil
+			return wrapped, nil
 		}
 	default:
 		return nil, ErrUnsupportType
